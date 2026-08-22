@@ -1,0 +1,38 @@
+name: litellm-copilot
+
+services:
+  litellm:
+    image: docker.litellm.ai/berriai/litellm-database:latest
+    container_name: litellm-copilot
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+
+    # Bound to the loopback interface. The gateway holds a live Copilot
+    # credential, so it must not be reachable from the network.
+    ports:
+      - "127.0.0.1:4000:4000"
+
+    # Compose reads ./.env automatically, so this resolves the key that
+    # setup.sh generated. The :? form fails loudly instead of starting a
+    # gateway with no authentication.
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?run ./setup.sh first to generate .env}
+
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./copilot_login.py:/app/copilot_login.py:ro
+      # The Copilot token. Authorized once on the host, then shared with the
+      # container. Read-write, because LiteLLM refreshes the short-lived
+      # api-key.json in place and the refresh must survive a recreate.
+      - ${HOME}/.config/litellm/github_copilot:/root/.config/litellm/github_copilot
+
+    healthcheck:
+      test:
+        - CMD
+        - /app/.venv/bin/python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness',timeout=3).status==200 else 1)
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s

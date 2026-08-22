@@ -1,0 +1,39 @@
+model_list:
+  # Claude models take Copilot's native Anthropic /v1/messages endpoint.
+  # LiteLLM passes tool calls, thinking blocks and anthropic-beta headers
+  # through verbatim, so Claude Code loses nothing in translation.
+  #
+  # These are all current-generation models, which matters: Claude Code sends
+  # output_config.effort on every request, and the 4.5 generation rejects it
+  # with invalid_reasoning_effort. Verify a model before swapping one in, see
+  # "Checking a model" in README.md.
+  - model_name: copilot-opus
+    litellm_params:
+      model: github_copilot/claude-opus-5
+  - model_name: copilot-sonnet
+    litellm_params:
+      model: github_copilot/claude-sonnet-5
+  - model_name: copilot-haiku
+    litellm_params:
+      model: github_copilot/claude-fable-5
+
+  # Non-Claude models. LiteLLM translates /v1/messages to /chat/completions
+  # for these, which is lossier but works.
+  - model_name: copilot-gpt
+    litellm_params:
+      model: github_copilot/gpt-5.4
+  - model_name: copilot-gpt-mini
+    litellm_params:
+      model: github_copilot/gpt-5-mini
+
+  # Catch-all, so you can also ask for any Copilot model by its real name,
+  # for example `claude --model github_copilot/claude-opus-4.8`.
+  - model_name: "github_copilot/*"
+    litellm_params:
+      model: "github_copilot/*"
+
+litellm_settings:
+  drop_params: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
